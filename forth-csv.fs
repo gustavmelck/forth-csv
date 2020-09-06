@@ -90,7 +90,9 @@ create buffer 128 chars allot
     buffer 128 csv-field>buffer 0=  if  drop  else
         last-csv-field# . ." :" type-buffer ." ;" cr  true recurse
     then  ;
-: test  ( -- )  s" test.csv" r/o open-file throw with-csv-file-id  cr false (test)  close-csv-file  ;
+: test  ( -- )
+    s" test.csv" r/o open-file throw dup >r with-csv-file-id  false (test)  
+    r> close-file throw  ;
 
 test .s
 \ }}}
