@@ -25,7 +25,7 @@ create c 0 c,               0 value prev-c-eol?
 
 defer in-quoted-field
 
-: at-quoted-field-end?  ( -- ok? )
+: at-quoted-field-end?  ( -- not-eof? )
     r> drop  next-c 1 <>  if  false  else
         c c@ case
             [char] ,  of  next-csv-field#+1 true  endof
@@ -35,7 +35,7 @@ defer in-quoted-field
         endcase
     then  ;
 
-: (in-quoted-field)  ( double-r-drop? -- ok? )  \ if the deferred word is called a double r> drop is required
+: (in-quoted-field)  ( double-r-drop? -- not-eof? )  \ if the deferred word is called a double r> drop is required
     if  r> drop  then  r> drop  next-c 1 <>  if  false  else
         c c@ case
             [char] "  of  at-quoted-field-end?  endof
@@ -46,7 +46,7 @@ defer in-quoted-field
 
 : -ubuf-trailing  ( -- )  ubuf ubuflen -trailing to ubuflen drop  ;
 
-: in-bare-field  ( -- ok? )
+: in-bare-field  ( -- not-eof? )
     r> drop  next-c 1 <>  if  -ubuf-trailing false  else
         c c@ case
             [char] ,  of  -ubuf-trailing next-csv-field#+1 true  endof
@@ -56,7 +56,7 @@ defer in-quoted-field
         endcase
     then  ;
 
-: (before-field)  ( -- ok? )
+: (before-field)  ( -- not-eof? )
     r> drop  next-c 1 <>  if  false  else
         c c@ case
             [char] "  of  true in-quoted-field  endof
@@ -67,13 +67,13 @@ defer in-quoted-field
             drop c 1 ubuf+  in-bare-field
         endcase
     then  ;
-: before-field  ( -- ok? )  (before-field)  ;
+: before-field  ( -- not-eof? )  (before-field)  ;
 
 }private  \ }}}
 
 : with-csv-file-id  ( fid -- )  to fid  ;
 
-: csv-field>buffer  ( addr u -- u' ok? )
+: read-csv-field  ( addr u -- u' not-eof? )
     to max-ubuflen to ubuf  0 to ubuflen  next-csv-field# to (last-csv-field#)  before-field  ubuflen swap  ;
 
 : last-csv-field#  ( -- u )  (last-csv-field#)  ;
@@ -87,7 +87,7 @@ create buffer 128 chars allot
 
 : (test)  ( in-loop? -- )
     if  r> drop  then
-    buffer 128 csv-field>buffer 0=  if  drop  else
+    buffer 128 read-csv-field 0=  if  drop  else
         last-csv-field# . ." :" type-buffer ." ;" cr  true recurse
     then  ;
 : test  ( -- )
