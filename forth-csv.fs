@@ -14,7 +14,7 @@ private{  \ {{{
 
 0 value fid
 
-create c 0 c,               0 value prev-c-eol?
+create c 0 c,  0 value prev-c-eol?
 
 0 value next-csv-field#     -1 value (last-csv-field#)
 
@@ -73,7 +73,7 @@ defer in-quoted-field
 
 : with-csv-file-id  ( fid -- )  to fid  ;
 
-: read-csv-field  ( addr u -- u' not-eof? )
+: read-csv-field  ( addr u -- u' not-eof? )  \ u' might be non-zero even though not-eof? is 0, meaning there's still data to be read
     to max-ubuflen to ubuf  0 to ubuflen  next-csv-field# to (last-csv-field#)  before-field  ubuflen swap  ;
 
 : last-csv-field#  ( -- u )  (last-csv-field#)  ;
@@ -81,19 +81,19 @@ defer in-quoted-field
 privatize
 
 \ tests {{{
-create buffer 128 chars allot
-
-: type-buffer  ( u -- )  buffer swap type  ;
-
-: (test)  ( in-loop? -- )
-    if  r> drop  then
-    buffer 128 read-csv-field 0=  if  drop  else
-        last-csv-field# . ." :" type-buffer ." ;" cr  true recurse
-    then  ;
-: test  ( -- )
-    s" test.csv" r/o open-file throw dup >r with-csv-file-id  false (test)  
-    r> close-file throw  ;
-
-test .s
+\ create buffer 128 chars allot
+\ 
+\ : type-buffer  ( u -- )  buffer swap type  ;
+\ 
+\ : (test)  ( in-loop? -- )
+\     if  r> drop  then
+\     buffer 128 read-csv-field 0=  if  drop  else
+\         last-csv-field# . ." :" type-buffer ." ;" cr  true recurse
+\     then  ;
+\ : test  ( -- )
+\     s" test.csv" r/o open-file throw dup >r with-csv-file-id  false (test)  
+\     r> close-file throw  ;
+\ 
+\ test .s
 \ }}}
 
