@@ -1,6 +1,8 @@
 \ forth csv parser by gustav melck, sep 2020
 \ vim: fdm=marker
 
+false value csv-escape?  \ change "" to \", which is useful when producing s-expression output, for example
+
 private{  \ {{{
 
 : gthrow  ( ior addr u -- )  2 pick  if  type >r ." ; forth-csv error " r@ . cr r> throw  else  2drop drop  then  ;
@@ -11,10 +13,13 @@ private{  \ {{{
 
 : ubuf+  ( addr u -- )  ubuf-available min dup >r ubuf ubuflen + swap cmove  ubuflen r> + to ubuflen  ;
 : 0ubuf+  ( addr u -- )  0 to ubuflen  ubuf+  ;
+: ubuf--  ( -- )  ubuflen 1- to ubuflen  ;
 
 0 value fid
 
 create c 0 c,  0 value prev-c-eol?
+
+create backslash char \ c,
 
 0 value next-csv-field#     -1 value (last-csv-field#)
 
@@ -28,9 +33,10 @@ defer in-quoted-field
 : at-quoted-field-end?  ( -- not-eof? )
     r> drop  next-c 1 <>  if  false  else
         c c@ case
-            [char] ,  of  next-csv-field#+1 true  endof
-            10        of  next-csv-field#0 true  endof
-            13        of  next-csv-field#0 true  endof
+            [char] ,  of  csv-escape?  if  ubuf--  then  ubuf--  next-csv-field#+1 true  endof
+            10        of  csv-escape?  if  ubuf--  then  ubuf--  next-csv-field#0 true  endof
+            13        of  csv-escape?  if  ubuf--  then  ubuf--  next-csv-field#0 true  endof
+            [char] "  of  csv-escape?  if  backslash 1 ubuf+  then  c 1 ubuf+  true in-quoted-field  endof
             drop c 1 ubuf+  true in-quoted-field  \ "true" is to trigger a second r> drop
         endcase
     then  ;
@@ -38,8 +44,8 @@ defer in-quoted-field
 : (in-quoted-field)  ( double-r-drop? -- not-eof? )  \ if the deferred word is called a double r> drop is required
     if  r> drop  then  r> drop  next-c 1 <>  if  false  else
         c c@ case
-            [char] "  of  at-quoted-field-end?  endof
-            drop c 1 ubuf+ false recurse
+            [char] "  of  csv-escape?  if  backslash 1 ubuf+  then  c 1 ubuf+  at-quoted-field-end?  endof
+            drop  c 1 ubuf+  false recurse
         endcase
     then  ;
 ' (in-quoted-field) is in-quoted-field
@@ -52,6 +58,7 @@ defer in-quoted-field
             [char] ,  of  -ubuf-trailing next-csv-field#+1 true  endof
             10        of  -ubuf-trailing next-csv-field#0 true  endof
             13        of  -ubuf-trailing next-csv-field#0 true  endof
+            [char] "  of  csv-escape?  if  backslash 1 ubuf+  then  c 1 ubuf+  recurse  endof
             drop c 1 ubuf+  recurse
         endcase
     then  ;
